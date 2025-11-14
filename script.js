@@ -27,6 +27,41 @@ const MINE_STATUS = {
 const INITIAL_TIME_DISPLAY = '00:00:00';
 const RENDER_DELAY = 1000;
 
+// カスタム確認ダイアログ
+function showConfirmDialog(title, message) {
+  return new Promise((resolve) => {
+    const modal = document.getElementById('customModal');
+    const modalTitle = document.getElementById('modalTitle');
+    const modalMessage = document.getElementById('modalMessage');
+    const confirmBtn = document.getElementById('modalConfirm');
+    const cancelBtn = document.getElementById('modalCancel');
+
+    modalTitle.textContent = title;
+    modalMessage.textContent = message;
+    modal.classList.add('show');
+
+    const handleConfirm = () => {
+      modal.classList.remove('show');
+      cleanup();
+      resolve(true);
+    };
+
+    const handleCancel = () => {
+      modal.classList.remove('show');
+      cleanup();
+      resolve(false);
+    };
+
+    const cleanup = () => {
+      confirmBtn.removeEventListener('click', handleConfirm);
+      cancelBtn.removeEventListener('click', handleCancel);
+    };
+
+    confirmBtn.addEventListener('click', handleConfirm);
+    cancelBtn.addEventListener('click', handleCancel);
+  });
+}
+
 // タイマー管理オブジェクト
 const countUpTimer = {
   startTime: 0,
@@ -294,10 +329,13 @@ const mineSweeper = {
     countUpTimer.pause();
     this.revealAllCells();
 
-    const message = 'ゲームオーバー\nリトライする？';
+    setTimeout(async () => {
+      const retry = await showConfirmDialog(
+        'ゲームオーバー 💣',
+        'リトライしますか？'
+      );
 
-    setTimeout(() => {
-      if (confirm(message)) {
+      if (retry) {
         this.initialize();
       } else {
         elements.pauseButton.disabled = true;
@@ -332,18 +370,22 @@ const mineSweeper = {
 
     const config = LEVEL_CONFIG[this.currentLevel];
     const message = [
-      'クリア!',
-      countUpTimer.gameClearTimeToString,
-      '〜ランキング〜',
-      `難易度[${config.name}]`,
-      `Gold [${config.rankThresholds.Gold.time}]`,
-      `Silver [${config.rankThresholds.Silver.time}]`,
-      `Bronze [${config.rankThresholds.Bronze.time}]`,
-      'リトライする?'
+      `⏱️ ${countUpTimer.gameClearTimeToString}`,
+      '',
+      '〜 ランキング 〜',
+      `難易度: ${config.name}`,
+      '',
+      `🥇 Gold: ${config.rankThresholds.Gold.time}`,
+      `🥈 Silver: ${config.rankThresholds.Silver.time}`,
+      `🥉 Bronze: ${config.rankThresholds.Bronze.time}`,
+      '',
+      'リトライしますか？'
     ].join('\n');
 
-    setTimeout(() => {
-      if (confirm(message)) {
+    setTimeout(async () => {
+      const retry = await showConfirmDialog('🎉 クリア！', message);
+
+      if (retry) {
         this.initialize();
       } else {
         elements.pauseButton.disabled = true;
@@ -441,8 +483,24 @@ const mineSweeper = {
   attachCellListeners() {
     const cells = Array.from(document.querySelectorAll('#mineSwTable td'));
     cells.forEach(cell => {
+      // 左クリック
       cell.addEventListener('click', () => this.handleCellClick(cell));
+
+      // 右クリック（コンテキストメニュー防止 + 旗の切り替え）
+      cell.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        this.handleRightClick(cell);
+      });
     });
+  },
+
+  handleRightClick(cell) {
+    // ゲーム開始前または開いたセルには旗を立てられない
+    if (this.isInitialized || cell.dataset.state === CELL_STATUS.OPENED) {
+      return;
+    }
+
+    this.toggleFlag(cell);
   }
 }
 
