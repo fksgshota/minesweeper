@@ -440,10 +440,131 @@ td.empty[data-value="8"] { color: var(--color-num-8); }
 .modal-message {
   font-size: 1.6rem;
   line-height: 1.8;
-  margin-bottom: 3rem;
+  margin-bottom: 2rem;
   color: var(--color-text-light);
   text-align: center;
-  white-space: pre-line;
+}
+
+.modal-details {
+  display: none;
+  margin-bottom: 2rem;
+}
+
+/* 結果表示のスタイル */
+.result-time {
+  font-size: 3rem;
+  font-weight: 700;
+  color: var(--accent-success);
+  text-align: center;
+  margin-bottom: 1rem;
+  text-shadow: 0 0 10px rgba(46, 204, 113, 0.5);
+}
+
+.new-record {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: var(--accent-secondary);
+  text-align: center;
+  margin-bottom: 1rem;
+  animation: pulse 1s ease infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+.rank-badge {
+  display: inline-block;
+  padding: 0.8rem 2rem;
+  font-size: 1.8rem;
+  font-weight: 700;
+  border-radius: var(--border-radius);
+  margin: 1rem auto;
+  text-align: center;
+}
+
+.rank-badge.gold {
+  background: linear-gradient(145deg, #f39c12, #f1c40f);
+  color: #2c3e50;
+  box-shadow: 0 4px 15px rgba(241, 196, 15, 0.4);
+}
+
+.rank-badge.silver {
+  background: linear-gradient(145deg, #95a5a6, #bdc3c7);
+  color: #2c3e50;
+  box-shadow: 0 4px 15px rgba(189, 195, 199, 0.4);
+}
+
+.rank-badge.bronze {
+  background: linear-gradient(145deg, #cd7f32, #e67e22);
+  color: #fff;
+  box-shadow: 0 4px 15px rgba(230, 126, 34, 0.4);
+}
+
+.info-section {
+  background: rgba(15, 52, 96, 0.3);
+  border-radius: var(--border-radius);
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.info-header {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--accent-secondary);
+  margin-bottom: 1rem;
+  text-align: center;
+}
+
+.rank-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+.rank-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.8rem 1.2rem;
+  background: rgba(22, 33, 62, 0.5);
+  border-radius: 5px;
+  font-size: 1.4rem;
+  border-left: 3px solid;
+}
+
+.rank-item.gold {
+  border-left-color: #f1c40f;
+}
+
+.rank-item.silver {
+  border-left-color: #bdc3c7;
+}
+
+.rank-item.bronze {
+  border-left-color: #e67e22;
+}
+
+.best-time {
+  font-size: 1.8rem;
+  font-weight: 700;
+  text-align: center;
+  color: var(--accent-success);
+  font-family: 'Courier New', monospace;
+}
+
+.question {
+  font-size: 1.6rem;
+  text-align: center;
+  margin-top: 1.5rem;
+  color: var(--color-text-light);
+  font-weight: 600;
 }
 
 .modal-buttons {

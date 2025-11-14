@@ -72,16 +72,26 @@ const bestTimeManager = {
 };
 
 // カスタム確認ダイアログ
-function showConfirmDialog(title, message) {
+function showConfirmDialog(title, message, details = '') {
   return new Promise((resolve) => {
     const modal = document.getElementById('customModal');
     const modalTitle = document.getElementById('modalTitle');
     const modalMessage = document.getElementById('modalMessage');
+    const modalDetails = document.getElementById('modalDetails');
     const confirmBtn = document.getElementById('modalConfirm');
     const cancelBtn = document.getElementById('modalCancel');
 
-    modalTitle.textContent = title;
-    modalMessage.textContent = message;
+    modalTitle.innerHTML = title;
+    modalMessage.innerHTML = message;
+
+    if (details) {
+      modalDetails.innerHTML = details;
+      modalDetails.style.display = 'block';
+    } else {
+      modalDetails.innerHTML = '';
+      modalDetails.style.display = 'none';
+    }
+
     modal.classList.add('show');
 
     const handleConfirm = () => {
@@ -429,37 +439,51 @@ const mineSweeper = {
     const clearTime = countUpTimer.gameClearTime;
 
     // ランクの判定
-    let rank = '';
+    let rankEmoji = '';
+    let rankText = '';
     if (clearTime <= config.rankThresholds.Gold.milliseconds) {
-      rank = '🥇 Gold ランク！';
+      rankEmoji = '🥇';
+      rankText = 'Gold';
     } else if (clearTime <= config.rankThresholds.Silver.milliseconds) {
-      rank = '🥈 Silver ランク！';
+      rankEmoji = '🥈';
+      rankText = 'Silver';
     } else if (clearTime <= config.rankThresholds.Bronze.milliseconds) {
-      rank = '🥉 Bronze ランク！';
+      rankEmoji = '🥉';
+      rankText = 'Bronze';
     }
 
-    const messageLines = [
-      `⏱️ ${countUpTimer.gameClearTimeToString}`,
-      isNewRecord ? '🎊 新記録達成！' : '',
-      rank,
-      '',
-      '〜 ランキング基準 〜',
-      `難易度: ${config.name}`,
-      '',
-      `🥇 Gold: ${config.rankThresholds.Gold.time}`,
-      `🥈 Silver: ${config.rankThresholds.Silver.time}`,
-      `🥉 Bronze: ${config.rankThresholds.Bronze.time}`,
-      '',
-      '📊 あなたのベストタイム',
-      `${this.getBestTimeDisplay(config.name)}`,
-      '',
-      'リトライしますか？'
-    ].filter(line => line !== '');
+    // メインメッセージ
+    const mainMessage = `
+      <div class="result-time">⏱️ ${countUpTimer.gameClearTimeToString}</div>
+      ${isNewRecord ? '<div class="new-record">🎊 新記録達成！</div>' : ''}
+      ${rankText ? `<div class="rank-badge ${rankText.toLowerCase()}">${rankEmoji} ${rankText} ランク</div>` : ''}
+    `;
 
-    const message = messageLines.join('\n');
+    // 詳細情報
+    const detailsHTML = `
+      <div class="info-section">
+        <div class="info-header">🎯 難易度: ${config.name}</div>
+      </div>
+
+      <div class="info-section">
+        <div class="info-header">🏆 ランキング基準</div>
+        <div class="rank-list">
+          <div class="rank-item gold">🥇 Gold: ${config.rankThresholds.Gold.time}</div>
+          <div class="rank-item silver">🥈 Silver: ${config.rankThresholds.Silver.time}</div>
+          <div class="rank-item bronze">🥉 Bronze: ${config.rankThresholds.Bronze.time}</div>
+        </div>
+      </div>
+
+      <div class="info-section">
+        <div class="info-header">📊 あなたのベストタイム</div>
+        <div class="best-time">${this.getBestTimeDisplay(config.name)}</div>
+      </div>
+
+      <div class="question">リトライしますか？</div>
+    `;
 
     setTimeout(async () => {
-      const retry = await showConfirmDialog('🎉 クリア！', message);
+      const retry = await showConfirmDialog('🎉 クリア！', mainMessage, detailsHTML);
 
       if (retry) {
         this.initialize();
