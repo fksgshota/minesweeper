@@ -1,71 +1,101 @@
+:root {
+  --cell-size: 2.7rem;
+  --button-height: 4rem;
+  --button-width: 12rem;
+  --border-width: 0.1rem;
+  --padding: 0.5rem;
+
+  --color-cell-default: rgb(3, 255, 232);
+  --color-cell-opened: rgb(174, 174, 175);
+  --color-cell-border: black;
+  --color-mine: red;
+  --color-flag: rgb(250, 255, 0);
+  --color-button-hover: rgb(11, 244, 160);
+  --color-button-active: rgba(222, 165, 20, 0.85);
+}
+
 html {
   font-size: 62.5%;
 }
 
-.gameStatus {
-  display: table;
+/* ゲームステータス領域 */
+.game-status {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 2rem;
 }
 
-.gameStatus button {
-  display: table-cell;
-  table-layout: fixed;
-  margin: 0.5rem;
-  padding: 0.5rem;
-  height: 4rem;
-  width: 12rem;
+.button-group {
+  display: flex;
+  gap: var(--padding);
+  flex-wrap: wrap;
+}
+
+.button-group button {
+  margin: var(--padding);
+  padding: var(--padding);
+  height: var(--button-height);
+  width: var(--button-width);
   font-size: 1.2rem;
   text-align: center;
+  cursor: pointer;
 }
 
-.gameStatus p {
-  display: table-cell;
-  table-layout: fixed;
-  margin: 0.5rem;
-  padding: 0.5rem;
-  height: 1rem;
-  width: 4rem;
+.button-group button:hover:not(:disabled) {
+  background-color: var(--color-button-hover);
+}
+
+.button-group button.activate {
+  background-color: var(--color-button-active);
+}
+
+.display {
+  display: flex;
+  gap: 2rem;
   font-size: 1.6rem;
   text-align: center;
+  padding: var(--padding);
 }
 
-button:hover {
-  background-color: rgb(11, 244, 160);
+.display span {
+  white-space: nowrap;
 }
 
-button.activate {
-  background-color: rgba(222, 165, 20, 0.85);
-}
-
+/* テーブル */
 table {
   text-align: center;
   font-size: 1.5rem;
   border-collapse: collapse;
   table-layout: fixed;
-  overflow: scroll;
+  user-select: none;
 }
 
 table td {
-  background: rgb(3, 255, 232);
-  border: solid 0.1rem black;
+  background: var(--color-cell-default);
+  border: solid var(--border-width) var(--color-cell-border);
   padding: 0;
   margin: 0;
-  width: 2.7rem;
-  height: 2.7rem;
-  min-width: 2.7rem;
+  width: var(--cell-size);
+  height: var(--cell-size);
+  min-width: var(--cell-size);
   vertical-align: middle;
+  cursor: pointer;
+}
+
+/* セル状態 */
+td.empty {
+  background-color: var(--color-cell-opened);
+  color: var(--color-cell-border);
   cursor: default;
 }
 
-td.empty {
-  background-color: rgb(174, 174, 175);
-  color: black;
-}
-
 td.flag {
-  color: rgb(250, 255, 0);
+  color: var(--color-flag);
 }
 
 td.mine {
-  background-color: rgb(174, 174, 175);
-  color: red;
+  background-color: var(--color-cell-opened);
+  color: var(--color-mine);
+  cursor: default;
 }

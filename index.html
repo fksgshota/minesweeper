@@ -9,22 +9,19 @@
   </head>
   <body>
     <h1>マインスイーパ</h1>
-    <section class="gameStatus">
-      <form class="buttonGroup">
+    <section class="game-status">
+      <div class="button-group">
         <button type="button" id="pauseButton" value="pause" disabled>一時停止</button>
         <button type="button" id="levelButton">初級</button>
-        <button type="button" id="flagModeButton">旗切り替え</button
-        ><button type="button" id="resetButton" disabled>リセット</button>
-        <button type="button" id="test" onclick="" style="visibility:hidden">test</button>
-      </form>
+        <button type="button" id="flagModeButton">旗切り替え</button>
+        <button type="button" id="resetButton" disabled>リセット</button>
+      </div>
       <div class="display">
-        <p id="timeCounter">00:00:00</p>
-        <p>地雷:</p>
-        <p id="mineCounter">00</p>
-        <p>旗:</p>
-        <p id="flagCounter">0</p>
+        <span id="timeCounter">00:00:00</span>
+        <span>地雷: <span id="mineCounter">00</span></span>
+        <span>旗: <span id="flagCounter">0</span></span>
       </div>
     </section>
-    <section id="minefield"></section>
+    <section id="minefield" aria-label="地雷原"></section>
   </body>
 </html>
