@@ -26,6 +26,50 @@ const MINE_STATUS = {
 
 const INITIAL_TIME_DISPLAY = '00:00:00';
 const RENDER_DELAY = 1000;
+const STORAGE_KEY = 'minesweeper_best_times';
+
+// ベストタイム管理
+const bestTimeManager = {
+  loadBestTimes() {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) {
+      try {
+        return JSON.parse(stored);
+      } catch (e) {
+        console.error('Failed to parse stored times:', e);
+      }
+    }
+    return {};
+  },
+
+  saveBestTime(levelName, time, timeString) {
+    const bestTimes = this.loadBestTimes();
+
+    if (!bestTimes[levelName] || bestTimes[levelName].milliseconds > time) {
+      bestTimes[levelName] = {
+        milliseconds: time,
+        timeString: timeString,
+        date: new Date().toISOString()
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(bestTimes));
+      return true; // 新記録
+    }
+    return false;
+  },
+
+  getBestTime(levelName) {
+    const bestTimes = this.loadBestTimes();
+    return bestTimes[levelName] || null;
+  },
+
+  getAllBestTimes() {
+    return this.loadBestTimes();
+  },
+
+  clearBestTimes() {
+    localStorage.removeItem(STORAGE_KEY);
+  }
+};
 
 // カスタム確認ダイアログ
 function showConfirmDialog(title, message) {
@@ -305,13 +349,26 @@ const mineSweeper = {
   updateBestTime() {
     const config = LEVEL_CONFIG[this.currentLevel];
     const clearTime = countUpTimer.gameClearTime;
+    const clearTimeString = countUpTimer.gameClearTimeToString;
 
-    for (const rank of ['Gold', 'Silver', 'Bronze']) {
-      if (config.rankThresholds[rank].milliseconds > clearTime) {
-        config.rankThresholds[rank].time = `${countUpTimer.gameClearTimeToString}   あなたの記録`;
-        break;
-      }
+    // LocalStorageに保存
+    const isNewRecord = bestTimeManager.saveBestTime(
+      config.name,
+      clearTime,
+      clearTimeString
+    );
+
+    return isNewRecord;
+  },
+
+  getBestTimeDisplay(levelName) {
+    const bestTime = bestTimeManager.getBestTime(levelName);
+    if (bestTime) {
+      const date = new Date(bestTime.date);
+      const dateStr = `${date.getFullYear()}/${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getDate().toString().padStart(2, '0')}`;
+      return `${bestTime.timeString} (${dateStr})`;
     }
+    return '---';
   },
 
   checkGameCleared() {
@@ -366,21 +423,40 @@ const mineSweeper = {
   handleGameClear() {
     countUpTimer.saveGameClearTime();
     this.revealAllCells();
-    this.updateBestTime();
+    const isNewRecord = this.updateBestTime();
 
     const config = LEVEL_CONFIG[this.currentLevel];
-    const message = [
+    const clearTime = countUpTimer.gameClearTime;
+
+    // ランクの判定
+    let rank = '';
+    if (clearTime <= config.rankThresholds.Gold.milliseconds) {
+      rank = '🥇 Gold ランク！';
+    } else if (clearTime <= config.rankThresholds.Silver.milliseconds) {
+      rank = '🥈 Silver ランク！';
+    } else if (clearTime <= config.rankThresholds.Bronze.milliseconds) {
+      rank = '🥉 Bronze ランク！';
+    }
+
+    const messageLines = [
       `⏱️ ${countUpTimer.gameClearTimeToString}`,
+      isNewRecord ? '🎊 新記録達成！' : '',
+      rank,
       '',
-      '〜 ランキング 〜',
+      '〜 ランキング基準 〜',
       `難易度: ${config.name}`,
       '',
       `🥇 Gold: ${config.rankThresholds.Gold.time}`,
       `🥈 Silver: ${config.rankThresholds.Silver.time}`,
       `🥉 Bronze: ${config.rankThresholds.Bronze.time}`,
       '',
+      '📊 あなたのベストタイム',
+      `${this.getBestTimeDisplay(config.name)}`,
+      '',
       'リトライしますか？'
-    ].join('\n');
+    ].filter(line => line !== '');
+
+    const message = messageLines.join('\n');
 
     setTimeout(async () => {
       const retry = await showConfirmDialog('🎉 クリア！', message);
