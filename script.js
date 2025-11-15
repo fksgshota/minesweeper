@@ -27,6 +27,233 @@ const MINE_STATUS = {
 const INITIAL_TIME_DISPLAY = '00:00:00';
 const RENDER_DELAY = 1000;
 const STORAGE_KEY = 'minesweeper_best_times';
+const SOUND_ENABLED_KEY = 'minesweeper_sound_enabled';
+
+// 音声管理システム
+const soundManager = {
+  audioContext: null,
+  enabled: true,
+  bgmOscillators: [],
+  bgmGainNode: null,
+  isBgmPlaying: false,
+
+  init() {
+    // AudioContextの初期化（ユーザーインタラクション後）
+    if (!this.audioContext) {
+      this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    }
+
+    // 保存された設定を読み込み
+    const saved = localStorage.getItem(SOUND_ENABLED_KEY);
+    this.enabled = saved === null ? true : saved === 'true';
+    this.updateButtonState();
+  },
+
+  toggle() {
+    this.enabled = !this.enabled;
+    localStorage.setItem(SOUND_ENABLED_KEY, this.enabled.toString());
+    this.updateButtonState();
+
+    if (this.enabled) {
+      this.playClick();
+      this.startBGM();
+    } else {
+      this.stopBGM();
+    }
+  },
+
+  updateButtonState() {
+    const btn = document.getElementById('soundToggle');
+    if (btn) {
+      btn.textContent = this.enabled ? '🔊' : '🔇';
+      btn.classList.toggle('sound-on', this.enabled);
+    }
+  },
+
+  // 基本音生成
+  playTone(frequency, duration, type = 'sine', volume = 0.3) {
+    if (!this.enabled || !this.audioContext) return;
+
+    const oscillator = this.audioContext.createOscillator();
+    const gainNode = this.audioContext.createGain();
+
+    oscillator.connect(gainNode);
+    gainNode.connect(this.audioContext.destination);
+
+    oscillator.frequency.value = frequency;
+    oscillator.type = type;
+    gainNode.gain.value = volume;
+
+    const now = this.audioContext.currentTime;
+    gainNode.gain.setValueAtTime(volume, now);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, now + duration);
+
+    oscillator.start(now);
+    oscillator.stop(now + duration);
+  },
+
+  // クリック音
+  playClick() {
+    this.playTone(800, 0.05, 'square', 0.1);
+  },
+
+  // セルを開く音
+  playReveal() {
+    this.playTone(600, 0.1, 'sine', 0.15);
+  },
+
+  // 旗を立てる音
+  playFlag() {
+    this.playTone(1000, 0.1, 'triangle', 0.2);
+  },
+
+  // 爆発音
+  playExplosion() {
+    if (!this.enabled || !this.audioContext) return;
+
+    const now = this.audioContext.currentTime;
+
+    // ノイズで爆発音を再現
+    const bufferSize = this.audioContext.sampleRate * 0.5;
+    const buffer = this.audioContext.createBuffer(1, bufferSize, this.audioContext.sampleRate);
+    const data = buffer.getChannelData(0);
+
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bufferSize * 0.3));
+    }
+
+    const noise = this.audioContext.createBufferSource();
+    noise.buffer = buffer;
+
+    const noiseGain = this.audioContext.createGain();
+    noiseGain.gain.setValueAtTime(0.5, now);
+    noiseGain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+
+    noise.connect(noiseGain);
+    noiseGain.connect(this.audioContext.destination);
+    noise.start(now);
+
+    // 低音を追加
+    this.playTone(100, 0.3, 'sawtooth', 0.3);
+  },
+
+  // クリア音
+  playClear() {
+    if (!this.enabled || !this.audioContext) return;
+
+    const now = this.audioContext.currentTime;
+    const notes = [523.25, 659.25, 783.99, 1046.50]; // C-E-G-C
+
+    notes.forEach((freq, i) => {
+      const oscillator = this.audioContext.createOscillator();
+      const gainNode = this.audioContext.createGain();
+
+      oscillator.connect(gainNode);
+      gainNode.connect(this.audioContext.destination);
+
+      oscillator.frequency.value = freq;
+      oscillator.type = 'sine';
+
+      const startTime = now + i * 0.15;
+      gainNode.gain.setValueAtTime(0, startTime);
+      gainNode.gain.linearRampToValueAtTime(0.3, startTime + 0.05);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, startTime + 0.3);
+
+      oscillator.start(startTime);
+      oscillator.stop(startTime + 0.3);
+    });
+  },
+
+  // BGM開始
+  startBGM() {
+    if (!this.enabled || !this.audioContext || this.isBgmPlaying) return;
+
+    this.isBgmPlaying = true;
+    const now = this.audioContext.currentTime;
+
+    // BGM用のゲインノード
+    this.bgmGainNode = this.audioContext.createGain();
+    this.bgmGainNode.gain.setValueAtTime(0, now);
+    this.bgmGainNode.gain.linearRampToValueAtTime(0.08, now + 1); // フェードイン
+    this.bgmGainNode.connect(this.audioContext.destination);
+
+    // シンプルな和音進行のBGM (Am - F - C - G)
+    const chords = [
+      [220.00, 261.63, 329.63], // Am (A-C-E)
+      [174.61, 220.00, 261.63], // F (F-A-C)
+      [130.81, 164.81, 196.00], // C (C-E-G)
+      [196.00, 246.94, 293.66]  // G (G-B-D)
+    ];
+
+    const playChordLoop = (startTime) => {
+      const chordDuration = 2; // 各コードを2秒
+
+      chords.forEach((chord, chordIndex) => {
+        const chordStartTime = startTime + chordIndex * chordDuration;
+
+        chord.forEach(freq => {
+          const osc = this.audioContext.createOscillator();
+          const oscGain = this.audioContext.createGain();
+
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(freq, chordStartTime);
+
+          oscGain.gain.setValueAtTime(0, chordStartTime);
+          oscGain.gain.linearRampToValueAtTime(0.15, chordStartTime + 0.1);
+          oscGain.gain.setValueAtTime(0.15, chordStartTime + chordDuration - 0.5);
+          oscGain.gain.linearRampToValueAtTime(0, chordStartTime + chordDuration);
+
+          osc.connect(oscGain);
+          oscGain.connect(this.bgmGainNode);
+
+          osc.start(chordStartTime);
+          osc.stop(chordStartTime + chordDuration);
+
+          this.bgmOscillators.push(osc);
+        });
+      });
+
+      // ループ
+      const loopDuration = chords.length * chordDuration;
+      if (this.isBgmPlaying) {
+        setTimeout(() => {
+          if (this.isBgmPlaying) {
+            this.bgmOscillators = this.bgmOscillators.filter(osc => osc.context.state === 'running');
+            playChordLoop(this.audioContext.currentTime);
+          }
+        }, loopDuration * 1000 - 100);
+      }
+    };
+
+    playChordLoop(now + 1);
+  },
+
+  // BGM停止
+  stopBGM() {
+    if (!this.isBgmPlaying) return;
+
+    this.isBgmPlaying = false;
+
+    const now = this.audioContext ? this.audioContext.currentTime : 0;
+
+    if (this.bgmGainNode && this.audioContext) {
+      // フェードアウト
+      this.bgmGainNode.gain.linearRampToValueAtTime(0, now + 0.5);
+    }
+
+    // オシレーターを停止
+    setTimeout(() => {
+      this.bgmOscillators.forEach(osc => {
+        try {
+          osc.stop();
+        } catch (e) {
+          // 既に停止している場合は無視
+        }
+      });
+      this.bgmOscillators = [];
+    }, 600);
+  }
+};
 
 // ベストタイム管理
 const bestTimeManager = {
@@ -244,11 +471,13 @@ const mineSweeper = {
       cell.textContent = '▲';
       cell.dataset.state = CELL_STATUS.FLAG_ON;
       this.flagCount++;
+      soundManager.playFlag();
     } else if (cell.dataset.state === CELL_STATUS.FLAG_ON) {
       cell.classList.remove('flag');
       cell.textContent = '';
       cell.dataset.state = CELL_STATUS.DEFAULT;
       this.flagCount--;
+      soundManager.playFlag();
     }
     elements.flagCounter.textContent = this.flagCount;
   },
@@ -342,6 +571,7 @@ const mineSweeper = {
     } else {
       cell.classList.add('empty');
       cell.textContent = cell.dataset.value || '';
+      soundManager.playReveal();
     }
   },
 
@@ -395,6 +625,7 @@ const mineSweeper = {
   handleGameOver() {
     countUpTimer.pause();
     this.revealAllCells();
+    soundManager.stopBGM();
 
     setTimeout(async () => {
       const retry = await showConfirmDialog(
@@ -417,6 +648,8 @@ const mineSweeper = {
     this.calculateAdjacentMines();
     this.isInitialized = false;
 
+    soundManager.startBGM();
+
     elements.resetButton.disabled = false;
     elements.pauseButton.disabled = false;
     elements.flagModeButton.disabled = false;
@@ -434,6 +667,8 @@ const mineSweeper = {
     countUpTimer.saveGameClearTime();
     this.revealAllCells();
     const isNewRecord = this.updateBestTime();
+    soundManager.stopBGM();
+    soundManager.playClear();
 
     const config = LEVEL_CONFIG[this.currentLevel];
     const clearTime = countUpTimer.gameClearTime;
@@ -543,6 +778,7 @@ const mineSweeper = {
       }
 
       if (cell.dataset.mine === MINE_STATUS.ON) {
+        soundManager.playExplosion();
         this.openCell(cell, true);
         this.handleGameOver();
         return;
@@ -607,10 +843,12 @@ const mineSweeper = {
 // イベントリスナーの初期化
 function initializeEventListeners() {
   elements.levelButton.addEventListener('click', () => {
+    soundManager.playClick();
     mineSweeper.cycleLevel();
   });
 
   elements.pauseButton.addEventListener('click', () => {
+    soundManager.playClick();
     if (elements.pauseButton.value === 'start') {
       countUpTimer.start();
     } else {
@@ -621,16 +859,27 @@ function initializeEventListeners() {
   });
 
   elements.flagModeButton.addEventListener('click', () => {
+    soundManager.playClick();
     mineSweeper.toggleFlagMode();
   });
 
   elements.resetButton.addEventListener('click', () => {
+    soundManager.playClick();
     mineSweeper.initialize();
   });
+
+  // 音声トグルボタン
+  const soundToggle = document.getElementById('soundToggle');
+  if (soundToggle) {
+    soundToggle.addEventListener('click', () => {
+      soundManager.toggle();
+    });
+  }
 }
 
 // アプリケーション起動
 document.addEventListener('DOMContentLoaded', () => {
+  soundManager.init();
   mineSweeper.initialize();
   initializeEventListeners();
 });

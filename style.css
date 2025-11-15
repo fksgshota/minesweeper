@@ -162,6 +162,21 @@ h1 {
   box-shadow: none;
 }
 
+/* 音声トグルボタン */
+#soundToggle {
+  min-width: 6rem;
+  font-size: 2rem;
+  padding: var(--padding);
+}
+
+#soundToggle.sound-on {
+  background: linear-gradient(145deg, var(--accent-success), #27ae60);
+}
+
+#soundToggle:not(.sound-on) {
+  background: linear-gradient(145deg, #95a5a6, #7f8c8d);
+}
+
 .display {
   display: flex;
   gap: 3rem;
